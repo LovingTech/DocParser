@@ -16,6 +16,12 @@ class Settings:
         self.max_pages: int = int(os.getenv("MAX_PAGES", "10"))
         self.image_max_side: int = int(os.getenv("IMAGE_MAX_SIDE", "2000"))
         self.image_quality: int = int(os.getenv("IMAGE_QUALITY", "75"))
+        # Number of extra attempts (after the first) when a response cannot be
+        # recovered or the LLM call fails transiently. Default: 2 retries.
+        self.llm_retries: int = int(os.getenv("LLM_RETRIES", "2"))
+        # Seconds to wait between retries. Kept non-blocking via asyncio.sleep;
+        # 0 means retry immediately (default).
+        self.llm_retry_backoff: float = float(os.getenv("LLM_RETRY_BACKOFF", "0"))
 
     @property
     def api_key_required(self) -> bool:

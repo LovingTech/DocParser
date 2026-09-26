@@ -1,0 +1,127 @@
+{
+  "mode": "http",
+  "split": "strat1_test",
+  "requested": 20,
+  "evaluated": 20,
+  "failures": 0,
+  "seconds": 110.74,
+  "per_second": 0.181,
+  "instance_exact_match_rate": 0.0,
+  "non_exact_instance_rate": 1.0,
+  "per_field_accuracy": {
+    "INVOICE_INFO": {
+      "matches": 20,
+      "count": 20,
+      "missing": 0,
+      "accuracy": 1.0
+    },
+    "BUYER": {
+      "matches": 18,
+      "count": 20,
+      "missing": 1,
+      "accuracy": 0.9
+    },
+    "DATE": {
+      "matches": 20,
+      "count": 20,
+      "missing": 0,
+      "accuracy": 1.0
+    },
+    "DISCOUNT": {
+      "matches": 0,
+      "count": 20,
+      "missing": 20,
+      "accuracy": 0.0
+    },
+    "DUE_DATE": {
+      "matches": 16,
+      "count": 20,
+      "missing": 4,
+      "accuracy": 0.8
+    },
+    "GSTIN_BUYER": {
+      "matches": 0,
+      "count": 20,
+      "missing": 8,
+      "accuracy": 0.0
+    },
+    "NOTE": {
+      "matches": 12,
+      "count": 20,
+      "missing": 7,
+      "accuracy": 0.6
+    },
+    "PAYMENT_DETAILS": {
+      "matches": 0,
+      "count": 20,
+      "missing": 20,
+      "accuracy": 0.0
+    },
+    "PO_NUMBER": {
+      "matches": 5,
+      "count": 20,
+      "missing": 15,
+      "accuracy": 0.25
+    },
+    "SELLER_ADDRESS": {
+      "matches": 19,
+      "count": 20,
+      "missing": 0,
+      "accuracy": 0.95
+    },
+    "SELLER_EMAIL": {
+      "matches": 19,
+      "count": 20,
+      "missing": 0,
+      "accuracy": 0.95
+    },
+    "SELLER_SITE": {
+      "matches": 13,
+      "count": 20,
+      "missing": 0,
+      "accuracy": 0.65
+    },
+    "SUB_TOTAL": {
+      "matches": 18,
+      "count": 20,
+      "missing": 2,
+      "accuracy": 0.9
+    },
+    "TAX": {
+      "matches": 16,
+      "count": 20,
+      "missing": 2,
+      "accuracy": 0.8
+    },
+    "TITLE": {
+      "matches": 11,
+      "count": 20,
+      "missing": 9,
+      "accuracy": 0.55
+    },
+    "TOTAL": {
+      "matches": 19,
+      "count": 20,
+      "missing": 1,
+      "accuracy": 0.95
+    },
+    "TOTAL_WORDS": {
+      "matches": 0,
+      "count": 20,
+      "missing": 19,
+      "accuracy": 0.0
+    },
+    "GSTIN_SELLER": {
+      "matches": 0,
+      "count": 20,
+      "missing": 0,
+      "accuracy": 0.0
+    },
+    "OTHER": {
+      "matches": 4,
+      "count": 20,
+      "missing": 0,
+      "accuracy": 0.2
+    }
+  }
+}

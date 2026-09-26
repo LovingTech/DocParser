@@ -45,13 +45,13 @@ async def log_requests(request: Request, call_next) -> Response:
     """Log every request/response so request flow is visible in the server logs."""
     method, path = request.method, request.url.path
     if method not in ("GET", "HEAD") or path not in ("/", "/favicon.ico"):
-        logger.info("-> %s %s", method, path)
+        logger.info("[http] -> %s %s", method, path)
     start = time.monotonic()
     try:
         response = await call_next(request)
     except Exception:
-        logger.exception("Unhandled error for %s %s", method, path)
+        logger.exception("[http] Unhandled error for %s %s", method, path)
         raise
     duration_ms = (time.monotonic() - start) * 1000
-    logger.info("<- %s %s -> %s (%.0fms)", method, path, response.status_code, duration_ms)
+    logger.info("[http] <- %s %s -> %s (%.0fms)", method, path, response.status_code, duration_ms)
     return response

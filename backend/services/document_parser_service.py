@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
-import json
+import logging
 from typing import Any
 
 from PIL import Image
@@ -13,10 +14,15 @@ from backend.config import Settings, get_settings
 from backend.models import FieldSchema, Schema, Message
 from backend.prompts import get_prompt
 from backend.services.document import Document
+from backend.services.extract_response import (
+    ExtractResponseError,
+    ParsedContent,
+    parse_extracted,
+)
 from backend.services.llm import LLM
 from backend.services.pdf_image_conversion_service import PdfToImageConversionService
 
-ParsedContent = dict[str, Any]
+logger = logging.getLogger("app")
 
 
 class DocumentParserService:
@@ -32,11 +38,30 @@ class DocumentParserService:
         self.pdf_to_image_conversion_service = pdf_to_image_conversion_service
         self._settings = settings or get_settings()
 
-    def parse(self, doc: Document) -> ParsedContent:
+    async def parse(self, doc: Document) -> ParsedContent:
         images = self.pdf_to_image_conversion_service.convert(doc)
         messages = self._build_prompt(doc.schema, images)
-        raw_content = self.llm.chat_completion(messages)
-        return _parse_json(raw_content)
+        return await self._extract_with_retry(doc.schema, messages)
+
+    async def _extract_with_retry(self, schema: Schema, messages: list[Message]) -> ParsedContent:
+        max_attempts = max(1, self._settings.llm_retries + 1)
+        last_error: BaseException | None = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                raw_content = self.llm.chat_completion(messages)
+                return parse_extracted(raw_content, schema)
+            except ExtractResponseError as exc:
+                logger.info("[parser] Extract: response could not be parsed; attempt %d/%d: %s",
+                            attempt, max_attempts, exc)
+                last_error = exc
+            except Exception as exc:
+                logger.info("[parser] Extract: LLM call failed; attempt %d/%d: %s",
+                            attempt, max_attempts, exc)
+                last_error = exc
+            if attempt < max_attempts and self._settings.llm_retry_backoff > 0:
+                await asyncio.sleep(self._settings.llm_retry_backoff)
+        assert last_error is not None
+        raise last_error
 
     def _build_prompt(self, schema: Schema, images: list[Image.Image]) -> list[Message]:
         system_message = Message(role="developer", content=self._build_system_text(schema))
@@ -80,15 +105,10 @@ def _format_fields(fields: list[FieldSchema]) -> str:
     lines = [""]
     for field in fields:
         lines.append(f"- {field.name} ({field.type.value}): {field.description}")
+        if field.items:
+            lines.append(
+                "    -> return a JSON array of objects; each object has these fields:"
+            )
+            for item in field.items:
+                lines.append(f"      - {item.name} ({item.type.value}): {item.description}")
     return "\n".join(lines)
-
-
-def _parse_json(content: str) -> ParsedContent:
-    try:
-        return json.loads(content)
-    except json.JSONDecodeError:
-        # Fall back to extracting a JSON object if the model wrapped it in a block.
-        start, end = content.find("{"), content.rfind("}")
-        if start != -1 and end != -1 and end > start:
-            return json.loads(content[start : end + 1])
-        raise

@@ -34,6 +34,7 @@ Each field has:
 - `name` — the key used in the output JSON.
 - `type` — `string`, `integer`, `number`, `boolean`, `date`, `array`, `object`, or `any`.
 - `description` — what the element refers to (guides the model).
+- `items` — nested fields describing each entry of an `array` (or the keys of an `object`). See below.
 
 Example:
 
@@ -48,6 +49,36 @@ Example:
   ]
 }
 ```
+
+### Repeated data (`array`)
+
+For line items, table rows, or contact entries, use `type: "array"` with an
+`items` list. The value returned is a JSON array of objects, each carrying
+exactly the item fields:
+
+```json
+{
+  "name": "invoice",
+  "fields": [
+    { "name": "line_items", "type": "array", "description": "Each row of the items table",
+      "items": [
+        { "name": "item", "type": "string",  "description": "Item description" },
+        { "name": "qty", "type": "integer", "description": "Quantity" },
+        { "name": "amount", "type": "number", "description": "Line total" }
+      ]
+    }
+  ]
+}
+```
+
+See [`docs/schema.md`](docs/schema.md) for the full reference.
+
+## Evals
+
+Quality is measured end-to-end with [`eval/evaluate.py`](eval/evaluate.py), which runs
+the full pipeline over a labeled dataset and compares output to ground-truth annotations.
+See [`docs/eval.md`](docs/eval.md) for modes (`mock`/`service`/`http`), scoring, and the
+dataset layout.
 
 ## Endpoints
 

@@ -39,7 +39,7 @@ class OpenAILLM:
             model=self._settings.model,
             messages=_langchain_messages_to_openai(messages),
             response_format={"type": "json_object"},
-            temperature=settings.temperature
+            temperature=self._settings.temperature
         )
         return response.choices[0].message.content or ""
 

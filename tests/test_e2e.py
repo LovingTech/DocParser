@@ -6,7 +6,7 @@ The VLM call is mocked, so no API key is required.
 
 import base64
 import json
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pymupdf
@@ -67,7 +67,7 @@ def test_health(client):
 
 
 def test_extract_multipart(client, sample_pdf):
-    with patch("backend.main.parser_service.parse", return_value=FAKE_DATA) as mocked:
+    with patch("backend.main.parser_service.parse", new=AsyncMock(return_value=FAKE_DATA)) as mocked:
         resp = client.post(
             "/extract",
             files={"file": ("invoice.pdf", sample_pdf, "application/pdf")},
@@ -82,7 +82,7 @@ def test_extract_multipart(client, sample_pdf):
 
 
 def test_extract_json_body(client, sample_pdf):
-    with patch("backend.main.parser_service.parse", return_value=FAKE_DATA) as mocked:
+    with patch("backend.main.parser_service.parse", new=AsyncMock(return_value=FAKE_DATA)) as mocked:
         resp = client.post(
             "/extract/json",
             json={
@@ -114,3 +114,36 @@ def test_extract_rejects_invalid_schema_json(client, sample_pdf):
     )
     assert resp.status_code == 422
     assert "schema" in resp.json()["detail"]
+
+
+def test_route_maps_unrecoverable_response_to_400(client, sample_pdf):
+    from backend.services.extract_response import ExtractResponseError
+
+    async def bad_response(messages):
+        raise ExtractResponseError("could not recover JSON")
+
+    with patch(
+        "backend.main.parser_service.parse", new=AsyncMock(side_effect=bad_response)
+    ):
+        resp = client.post(
+            "/extract",
+            files={"file": ("invoice.pdf", sample_pdf, "application/pdf")},
+            data={"schema": json.dumps(SCHEMA)},
+        )
+    assert resp.status_code == 400
+    assert "recover" in resp.json()["detail"]
+
+
+def test_route_maps_transient_failure_to_500(client, sample_pdf):
+    async def network_error(messages):
+        raise RuntimeError("network hiccup")
+
+    with patch(
+        "backend.main.parser_service.parse", new=AsyncMock(side_effect=network_error)
+    ):
+        resp = client.post(
+            "/extract",
+            files={"file": ("invoice.pdf", sample_pdf, "application/pdf")},
+            data={"schema": json.dumps(SCHEMA)},
+        )
+    assert resp.status_code == 500

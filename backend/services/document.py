@@ -1,7 +1,5 @@
 """Domain model for a document awaiting extraction."""
 
-import warnings
-
 from pydantic import BaseModel
 
 from backend.models import Schema

@@ -25,11 +25,15 @@ class FieldSchema(BaseModel):
     - name: the key used in the output JSON.
     - type: the data type of the value.
     - description: what the element refers to, used to guide the model.
+    - items: nested fields describing each entry of an ``array``. For
+      ``type = "array"`` the value returned is a JSON list of objects, each
+      containing exactly these sub-fields. Leave empty for a scalar field.
     """
 
     name: str
     type: FieldType = FieldType.STRING
     description: str = ""
+    items: List["FieldSchema"] = Field(default_factory=list)
 
 
 class Message(BaseModel):

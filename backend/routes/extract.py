@@ -42,28 +42,28 @@ async def extract(
     schema_obj = _parse_schema(schema)
     data = await file.read()
     logger.info(
-        "Extract: %r (%d bytes) schema=%r",
+        "[route] Extract: %r (%d bytes) schema=%r",
         file.filename,
         len(data),
         schema_obj.name,
     )
     if not data[:4] == b"%PDF":
-        logger.info("Extract: rejected non-PDF payload (%d bytes)", len(data))
+        logger.info("[route] Extract: rejected non-PDF payload (%d bytes)", len(data))
         raise HTTPException(status_code=400, detail="Uploaded file is not a valid PDF.")
 
     try:
-        logger.info("Extract: rendering + parsing with model=%s", _settings.model)
-        extracted = parser_service.parse(Document(pdf_bytes=data, schema=schema_obj))
+        logger.info("[route] Extract: rendering + parsing with model=%s", _settings.model)
+        extracted = await parser_service.parse(Document(pdf_bytes=data, schema=schema_obj))
     except HTTPException:
         raise
     except ValueError as exc:
-        logger.info("Extract: %s", exc)
+        logger.info("[route] Extract: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception:
-        logger.exception("Extract: unexpected failure")
+        logger.exception("[route] Extract: unexpected failure")
         raise HTTPException(status_code=500, detail="Internal error; see server logs")
 
-    logger.info("Extract: ok fields=%s", sorted(extracted.keys()))
+    logger.info("[route] Extract: ok fields=%s", sorted(extracted.keys()))
     return ExtractionResponse(
         request_id=uuid.uuid4().hex,
         schema_name=schema_obj.name,
@@ -75,24 +75,24 @@ async def extract(
 async def extract_json(body: JSONSchemaBody) -> ExtractionResponse:
     """JSON endpoint: PDF provided as a base64 string (handy for non-multipart clients)."""
     data = b64decode(body.file_base64)
-    logger.info("Extract/json: schema=%r payload=%d bytes", body.schema.name, len(data))
+    logger.info("[route] Extract: schema=%r payload=%d bytes", body.schema.name, len(data))
     if not data[:4] == b"%PDF":
-        logger.info("Extract/json: rejected non-PDF payload (%d bytes)", len(data))
+        logger.info("[route] Extract: rejected non-PDF payload (%d bytes)", len(data))
         raise HTTPException(status_code=400, detail="file_base64 is not a valid PDF.")
 
     try:
-        logger.info("Extract/json: rendering + parsing with model=%s", _settings.model)
-        extracted = parser_service.parse(Document(pdf_bytes=data, schema=body.schema))
+        logger.info("[route] Extract: rendering + parsing with model=%s", _settings.model)
+        extracted = await parser_service.parse(Document(pdf_bytes=data, schema=body.schema))
     except HTTPException:
         raise
     except ValueError as exc:
-        logger.info("Extract/json: %s", exc)
+        logger.info("[route] Extract: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception:
-        logger.exception("Extract/json: unexpected failure")
+        logger.exception("[route] Extract: unexpected failure")
         raise HTTPException(status_code=500, detail="Internal error; see server logs")
 
-    logger.info("Extract/json: ok fields=%s", sorted(extracted.keys()))
+    logger.info("[route] Extract: ok fields=%s", sorted(extracted.keys()))
     return ExtractionResponse(
         request_id=uuid.uuid4().hex,
         schema_name=body.schema.name,
