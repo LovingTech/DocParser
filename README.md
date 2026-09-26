@@ -63,7 +63,7 @@ Example:
 
 ```bash
 uv sync
-uv run uvicorn app.main:app --reload
+uv run uvicorn backend.main:app --reload
 ```
 
 ## Run with Docker

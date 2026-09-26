@@ -12,7 +12,7 @@ import pytest
 import pymupdf
 from fastapi.testclient import TestClient
 
-from app.main import app
+from backend.main import app
 
 SCHEMA = {
     "name": "invoice",
@@ -67,7 +67,7 @@ def test_health(client):
 
 
 def test_extract_multipart(client, sample_pdf):
-    with patch("app.main.parser_service.parse", return_value=FAKE_DATA) as mocked:
+    with patch("backend.main.parser_service.parse", return_value=FAKE_DATA) as mocked:
         resp = client.post(
             "/extract",
             files={"file": ("invoice.pdf", sample_pdf, "application/pdf")},
@@ -82,7 +82,7 @@ def test_extract_multipart(client, sample_pdf):
 
 
 def test_extract_json_body(client, sample_pdf):
-    with patch("app.main.parser_service.parse", return_value=FAKE_DATA) as mocked:
+    with patch("backend.main.parser_service.parse", return_value=FAKE_DATA) as mocked:
         resp = client.post(
             "/extract/json",
             json={

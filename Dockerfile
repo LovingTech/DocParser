@@ -14,9 +14,12 @@ COPY backend ./backend
 
 RUN uv sync --no-cache --no-dev
 
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+# Pre-compile the application sources to bytecode at build time so the container
+# does not re-compile them on the first request.
+RUN python -m compileall -q backend
+
+ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-reload"]
