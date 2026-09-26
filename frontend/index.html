@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document Parser</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: #000; background: #fff; line-height: 1.5;
+    }
+    header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      padding: 16px 24px; border-bottom: 1px solid #000;
+    }
+    header h1 { font-size: 16px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+    header .model { font-size: 13px; color: #666; }
+    main { max-width: 640px; margin: 0 auto; padding: 24px; }
+    section { margin-bottom: 28px; }
+    label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+    input[type=file] { font-size: 14px; }
+    textarea, input[type=text] {
+      width: 100%; font: inherit; color: #000; background: #fff;
+      border: 1px solid #000; border-radius: 2px; padding: 8px 10px;
+    }
+    textarea { resize: vertical; min-height: 180px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+    .hint { font-size: 12px; color: #666; margin-top: 6px; }
+    button {
+      font: inherit; cursor: pointer; color: #fff; background: #000;
+      border: 1px solid #000; border-radius: 2px; padding: 8px 14px; font-weight: 500;
+    }
+    button:hover { background: #222; }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+    button.secondary { color: #000; background: #fff; }
+    button.secondary:hover { background: #f2f2f2; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row button { padding: 6px 10px; font-size: 13px; }
+    pre {
+      background: #f7f7f7; border: 1px solid #000; border-radius: 2px;
+      padding: 12px; overflow: auto; max-height: 420px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; white-space: pre;
+    }
+    pre.empty { color: #999; background: #fff; font-family: inherit; }
+    .status { font-size: 13px; min-height: 18px; margin-top: 8px; }
+    .status.err { color: #000; }
+    .meta { font-size: 12px; color: #666; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Document Parser</h1>
+    <span class="model" id="model">connect…</span>
+  </header>
+
+  <main>
+    <section>
+      <label for="file">PDF</label>
+      <input type="file" id="file" accept="application/pdf" />
+      <div class="hint" id="filelabel">No file chosen.</div>
+    </section>
+
+    <section>
+      <label for="schema">Schema (JSON)</label>
+      <textarea id="schema"></textarea>
+      <div class="hint">Each entry needs a <code>name</code>, <code>type</code>, and <code>description</code>.
+        Types: string, integer, number, boolean, date, array, object, any.</div>
+    </section>
+
+    <section class="row">
+      <button id="extract">Extract</button>
+      <button class="secondary" id="reset">Reset schema</button>
+    </section>
+    <div class="status" id="status"></div>
+
+    <section>
+      <label>Result</label>
+      <pre class="empty" id="result">Upload a PDF and configure your schema, then press Extract.</pre>
+      <div class="row" style="margin-top:8px">
+        <button class="secondary" id="copy" disabled>Copy JSON</button>
+        <button class="secondary" id="download" disabled>Download</button>
+      </div>
+      <div class="meta" id="meta"></div>
+    </section>
+  </main>
+
+  <script>
+    const DEFAULT_SCHEMA = {
+      name: "invoice",
+      fields: [
+        { name: "invoice_number", type: "string",  description: "Invoice or receipt number" },
+        { name: "issue_date",     type: "date",    description: "Date the invoice was issued (YYYY-MM-DD)" },
+        { name: "vendor_name",    type: "string",  description: "Name of the vendor or supplier" },
+        { name: "total",          type: "number",  description: "Grand total amount due" }
+      ]
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const fileInput = $("file");
+
+    $("schema").value = JSON.stringify(DEFAULT_SCHEMA, null, 2);
+    $("reset").addEventListener("click", () => {
+      $("schema").value = JSON.stringify(DEFAULT_SCHEMA, null, 2);
+      $("status").textContent = "";
+    });
+
+    fileInput.addEventListener("change", () => {
+      $("filelabel").textContent = fileInput.files[0]
+        ? `Selected: ${fileInput.files[0].name}`
+        : "No file chosen.";
+    });
+
+    let lastResult = null;
+
+    $("extract").addEventListener("click", async () => {
+      const status = $("status");
+      if (!fileInput.files[0]) { status.className = "status err"; status.textContent = "Please select a PDF first."; return; }
+
+      let schema;
+      try {
+        schema = JSON.parse($("schema").value);
+      } catch (e) {
+        status.className = "status err"; status.textContent = "Schema is not valid JSON."; return;
+      }
+      if (!schema || !Array.isArray(schema.fields) || !schema.fields.length) {
+        status.className = "status err"; status.textContent = "Schema needs at least one field."; return;
+      }
+
+      const fd = new FormData();
+      fd.append("file", fileInput.files[0]);
+      fd.append("schema", JSON.stringify(schema));
+
+      const btn = $("extract"); btn.disabled = true; btn.textContent = "Extracting…";
+      status.className = "status"; status.textContent = "Requesting…";
+
+      try {
+        const res = await fetch("/extract", { method: "POST", body: fd });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `${res.status} ${res.statusText}`);
+        }
+        const data = await res.json();
+        lastResult = data.data;
+        const result = $("result");
+        result.className = "";
+        result.textContent = JSON.stringify(data.data, null, 2);
+        $("meta").textContent = `request_id: ${data.request_id} · schema: ${data.schema_name}`;
+        status.className = "status"; status.textContent = "Done.";
+        $("copy").disabled = false; $("download").disabled = false;
+      } catch (e) {
+        status.className = "status err"; status.textContent = e.message;
+        const result = $("result");
+        result.className = "empty";
+        result.textContent = "Error: " + e.message;
+        $("copy").disabled = true; $("download").disabled = true;
+      } finally {
+        btn.disabled = false; btn.textContent = "Extract";
+      }
+    });
+
+    $("copy").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(lastResult, null, 2));
+        $("copy").textContent = "Copied!"; setTimeout(() => $("copy").textContent = "Copy JSON", 1200);
+      } catch {
+        $("copy").textContent = "Failed"; setTimeout(() => $("copy").textContent = "Copy JSON", 1200);
+      }
+    });
+
+    $("download").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(lastResult, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "extracted.json"; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    async function loadHealth() {
+      try {
+        const res = await fetch("/health");
+        const h = await res.json();
+        $("model").textContent = `${h.model} @ ${h.base_url}`;
+      } catch { $("model").textContent = "not connected"; }
+    }
+
+    loadHealth();
+  </script>
+</body>
+</html>

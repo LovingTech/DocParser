@@ -1,0 +1,27 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: doc-parser-nginx
+    attach: false
+    depends_on:
+      - doc-parser
+    ports:
+      - "9000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+
+  doc-parser:
+    build: .
+    image: doc-parser:latest
+    container_name: doc-parser
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
+      - PDF_DPI=${PDF_DPI:-200}
+      - MAX_PAGES=${MAX_PAGES:-10}
+      - IMAGE_MAX_SIDE=${IMAGE_MAX_SIDE:-2000}
+      - IMAGE_QUALITY=${IMAGE_QUALITY:-75}
+    restart: unless-stopped
