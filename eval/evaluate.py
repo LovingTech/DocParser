@@ -25,7 +25,8 @@ Examples
 --------
   uv run python eval/evaluate.py --mode mock --limit 15
   uv run python eval/evaluate.py --split-csv eval/dataset/strat1_test.csv --limit 100
-  uv run python eval/evaluate.py --mode http --base-url http://localhost:8000 --limit 50
+   uv run python eval/evaluate.py --mode http --base-url http://localhost:8000 --limit 50
+   uv run python eval/evaluate.py --mode http --concurrency 8 --limit 200
 """
 
 from __future__ import annotations
@@ -155,13 +156,13 @@ class FakeLLM:
         return json.dumps(self._expected)
 
 
-def run_http(client: Any, url: str, pdf_bytes: bytes, schema: Any) -> Dict[str, Any]:
+async def run_http_async(client: Any, url: str, pdf_bytes: bytes, schema: Any) -> Dict[str, Any]:
     """Send one image to a running server's /extract/json endpoint."""
     body = {
         "file_base64": base64.b64encode(pdf_bytes).decode("ascii"),
         "schema": schema.model_dump(),
     }
-    resp = client.post(f"{url.rstrip('/')}/extract/json", json=body, timeout=120)
+    resp = await client.post(f"{url.rstrip('/')}/extract/json", json=body, timeout=120)
     resp.raise_for_status()
     payload = resp.json()
     if payload.get("status") != "success":
@@ -254,29 +255,61 @@ def score(instance_id: str, expected: Dict[str, str], predicted: Dict[str, Any],
 # --------------------------------------------------------------------------- #
 # Orchestration
 # --------------------------------------------------------------------------- #
-def build_parser(args: argparse.Namespace):
-    """Return a parser ready to run, or the httpx client for --mode http."""
-    if args.mode == "http":
-        import httpx
+@dataclass
+class Outcome:
+    img_rel: str
+    ok: bool = False
+    expected: Optional[Dict[str, str]] = None
+    predicted: Optional[Dict[str, Any]] = None
+    error: Optional[BaseException] = None
 
-        return httpx.Client(), None
 
-    from backend.config import get_settings
-    from backend.services import (
-        DocumentParserService,
-        PdfToImageConversionService,
-    )
+def _build_parser(mode: str, expected: Dict[str, str], settings: Any) -> Any:
+    """Construct a parser pre-loaded with the instance's LLM for mock/service runs."""
+    from backend.services import DocumentParserService, PdfToImageConversionService
     from backend.services.llm import OpenAILLM
 
-    settings = get_settings()
-    parser = DocumentParserService(
-        llm=None,
+    llm: Any = FakeLLM(expected) if mode == "mock" else OpenAILLM(settings)
+    return DocumentParserService(
+        llm=llm,
         pdf_to_image_conversion_service=PdfToImageConversionService(settings),
         settings=settings,
     )
-    if args.mode == "service":
-        parser.llm = OpenAILLM(settings)
-    return None, parser
+
+
+async def _single(
+    row: tuple[str, str],
+    mode: str,
+    client: Any,
+    base_url: str,
+    settings: Any,
+) -> Outcome:
+    """Render, parse, and collect one instance.
+
+    Each mock/service instance builds its own parser, so concurrent tasks share
+    no mutable state; the http client (if any) is safe to reuse across tasks
+    inside a single event loop.
+    """
+    img_rel, annot_rel = row
+    try:
+        pdf_bytes = image_to_pdf_bytes(IMAGES_DIR / img_rel)
+        expected = expected_annotation(ORIGINALS_DIR / annot_rel)
+        if expected is None:
+            return Outcome(img_rel, ok=False, error=None)
+        schema = schema_from_fields(expected)
+
+        if mode in ("mock", "service"):
+            from backend.services import Document as _Document
+
+            predicted = await _run_parse(
+                _build_parser(mode, expected, settings),
+                _Document(pdf_bytes=pdf_bytes, schema=schema),
+            )
+        else:  # http
+            predicted = await run_http_async(client, base_url, pdf_bytes, schema)
+        return Outcome(img_rel, expected=expected, predicted=predicted, ok=True)
+    except Exception as exc:
+        return Outcome(img_rel, ok=False, error=exc)
 
 
 def evaluate(args: argparse.Namespace) -> Dict[str, Any]:
@@ -288,35 +321,26 @@ def evaluate(args: argparse.Namespace) -> Dict[str, Any]:
     label = "strat2" if args.split2 else (args.split_csv or "strat1_test")
     logger.info("eval: mode=%s n=%d split=%s", args.mode, len(rows), label)
 
-    runner, parser = build_parser(args)
+    settings: Any = None
+    if args.mode in ("mock", "service"):
+        from backend.config import get_settings
+
+        settings = get_settings()
+
+    start = time.time()
+    results = asyncio.run(_run_all(args, settings, rows))
+
     stats = RunStats()
     failures = 0
-    start = time.time()
-    for img_rel, annot_rel in rows:
-        try:
-            pdf_bytes = image_to_pdf_bytes(IMAGES_DIR / img_rel)
-            expected = expected_annotation(ORIGINALS_DIR / annot_rel)
-            if expected is None:
-                failures += 1
-                continue
-            schema = schema_from_fields(expected)
-
-            if args.mode in ("mock", "service"):
-                from backend.services import Document as _Document
-
-                if args.mode == "mock":
-                    parser.llm = FakeLLM(expected)  # type: ignore[assignment]
-                predicted = asyncio.run(
-                    _run_parse(parser, _Document(pdf_bytes=pdf_bytes, schema=schema))
-                )
-            else:  # http
-                predicted = run_http(runner, args.base_url, pdf_bytes, schema)
-        except Exception as exc:  # keep the run going; record the failure
-            failures += 1
-            logger.info("eval: %s -> %s", img_rel, exc)
+    for outcome in results:
+        if outcome.error is not None:
+            failures += 1  # keep the run going; record the failure
+            logger.info("eval: %s -> %s", outcome.img_rel, outcome.error)
             continue
-
-        score(img_rel, expected, predicted, stats)
+        if not outcome.ok or outcome.expected is None:
+            failures += 1
+            continue
+        score(outcome.img_rel, outcome.expected, outcome.predicted, stats)
 
     elapsed = time.time() - start
     report = build_report(args, len(rows), stats, elapsed, failures)
@@ -325,6 +349,29 @@ def evaluate(args: argparse.Namespace) -> Dict[str, Any]:
         Path(args.report).write_text(json.dumps(report, indent=2))
         logger.info("eval: report written to %s", args.report)
     return report
+
+
+async def _run_all(
+    args: argparse.Namespace, settings: Any, rows: List[tuple[str, str]]
+) -> List[Outcome]:
+    """Process every row bounded by --concurrency, in a single event loop."""
+    import httpx
+
+    concurrency = max(1, args.concurrency)
+    client: Any = httpx.AsyncClient() if args.mode == "http" else None
+    try:
+        sem = asyncio.Semaphore(concurrency)
+
+        async def bounded(row: tuple[str, str]) -> Outcome:
+            async with sem:
+                return await _single(row, args.mode, client, args.base_url, settings)
+
+        if concurrency > 1:
+            return await asyncio.gather(*(bounded(r) for r in rows), return_exceptions=True)
+        return [await bounded(r) for r in rows]
+    finally:
+        if client is not None:
+            await client.aclose()
 
 
 def build_report(args, n_rows, stats, elapsed, failures) -> Dict[str, Any]:
@@ -378,6 +425,8 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p.add_argument("--seed", type=int, default=None, help="Seed for shuffling the split.")
     p.add_argument("--base-url", default="http://localhost:8000",
                    help="Server URL for --mode http.")
+    p.add_argument("--concurrency", type=int, default=1,
+                   help="Process this many instances concurrently (default: 1).")
     p.add_argument("--report", default="eval/eval_report.json", help="JSON report path.")
     p.add_argument("--quiet", action="store_true", help="Suppress INFO logging.")
     return p.parse_args(argv)

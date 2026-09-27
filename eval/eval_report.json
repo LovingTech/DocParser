@@ -1,127 +1,151 @@
 {
   "mode": "http",
   "split": "strat1_test",
-  "requested": 20,
-  "evaluated": 20,
+  "requested": 30,
+  "evaluated": 30,
   "failures": 0,
-  "seconds": 42.43,
-  "per_second": 0.471,
+  "seconds": 64.42,
+  "per_second": 0.466,
   "instance_exact_match_rate": 0.0,
   "non_exact_instance_rate": 1.0,
   "per_field_accuracy": {
     "INVOICE_INFO": {
-      "matches": 19,
-      "count": 20,
+      "matches": 23,
+      "count": 30,
       "missing": 0,
-      "accuracy": 0.95
+      "accuracy": 0.7667
     },
     "BUYER": {
-      "matches": 18,
-      "count": 20,
-      "missing": 1,
-      "accuracy": 0.9
+      "matches": 25,
+      "count": 30,
+      "missing": 3,
+      "accuracy": 0.8333
     },
     "DATE": {
-      "matches": 18,
-      "count": 20,
-      "missing": 1,
-      "accuracy": 0.9
+      "matches": 26,
+      "count": 30,
+      "missing": 3,
+      "accuracy": 0.8667
     },
     "DISCOUNT": {
-      "matches": 19,
-      "count": 20,
+      "matches": 24,
+      "count": 25,
       "missing": 1,
-      "accuracy": 0.95
+      "accuracy": 0.96
     },
     "DUE_DATE": {
-      "matches": 17,
-      "count": 20,
+      "matches": 21,
+      "count": 25,
       "missing": 1,
-      "accuracy": 0.85
+      "accuracy": 0.84
     },
     "GSTIN_BUYER": {
-      "matches": 6,
-      "count": 20,
+      "matches": 9,
+      "count": 25,
       "missing": 1,
-      "accuracy": 0.3
+      "accuracy": 0.36
     },
     "NOTE": {
-      "matches": 11,
-      "count": 20,
-      "missing": 9,
-      "accuracy": 0.55
+      "matches": 15,
+      "count": 25,
+      "missing": 10,
+      "accuracy": 0.6
     },
     "PAYMENT_DETAILS": {
       "matches": 0,
-      "count": 20,
-      "missing": 20,
+      "count": 25,
+      "missing": 25,
       "accuracy": 0.0
     },
     "PO_NUMBER": {
-      "matches": 16,
-      "count": 20,
-      "missing": 1,
+      "matches": 20,
+      "count": 25,
+      "missing": 2,
       "accuracy": 0.8
     },
     "SELLER_ADDRESS": {
-      "matches": 0,
-      "count": 20,
-      "missing": 1,
-      "accuracy": 0.0
+      "matches": 3,
+      "count": 30,
+      "missing": 4,
+      "accuracy": 0.1
     },
     "SELLER_EMAIL": {
-      "matches": 1,
-      "count": 20,
-      "missing": 2,
-      "accuracy": 0.05
+      "matches": 2,
+      "count": 25,
+      "missing": 3,
+      "accuracy": 0.08
     },
     "SELLER_SITE": {
       "matches": 0,
-      "count": 20,
-      "missing": 1,
+      "count": 25,
+      "missing": 2,
       "accuracy": 0.0
     },
     "SUB_TOTAL": {
-      "matches": 19,
-      "count": 20,
-      "missing": 1,
-      "accuracy": 0.95
+      "matches": 25,
+      "count": 30,
+      "missing": 4,
+      "accuracy": 0.8333
     },
     "TAX": {
-      "matches": 19,
-      "count": 20,
-      "missing": 1,
-      "accuracy": 0.95
+      "matches": 23,
+      "count": 25,
+      "missing": 2,
+      "accuracy": 0.92
     },
     "TITLE": {
-      "matches": 7,
-      "count": 20,
-      "missing": 13,
-      "accuracy": 0.35
+      "matches": 8,
+      "count": 30,
+      "missing": 22,
+      "accuracy": 0.2667
     },
     "TOTAL": {
-      "matches": 17,
-      "count": 20,
-      "missing": 3,
-      "accuracy": 0.85
+      "matches": 24,
+      "count": 30,
+      "missing": 6,
+      "accuracy": 0.8
     },
     "TOTAL_WORDS": {
       "matches": 0,
-      "count": 20,
-      "missing": 20,
+      "count": 25,
+      "missing": 25,
       "accuracy": 0.0
     },
     "GSTIN_SELLER": {
       "matches": 0,
-      "count": 20,
-      "missing": 20,
+      "count": 25,
+      "missing": 25,
       "accuracy": 0.0
     },
     "OTHER": {
       "matches": 0,
-      "count": 20,
-      "missing": 20,
+      "count": 30,
+      "missing": 30,
       "accuracy": 0.0
+    },
+    "NUMBER": {
+      "matches": 0,
+      "count": 5,
+      "missing": 5,
+      "accuracy": 0.0
+    },
+    "SELLER_NAME": {
+      "matches": 0,
+      "count": 5,
+      "missing": 5,
+      "accuracy": 0.0
+    },
+    "GSTIN": {
+      "matches": 3,
+      "count": 5,
+      "missing": 2,
+      "accuracy": 0.6
+    },
+    "GST(7%)": {
+      "matches": 3,
+      "count": 5,
+      "missing": 2,
+      "accuracy": 0.6
     }
   }
 }

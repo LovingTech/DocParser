@@ -94,6 +94,7 @@ uv run eval/evaluate.py --mode http --base-url http://localhost:8000
 | `--limit`        | `20`                            | Cap the number of instances.                             |
 | `--seed`         | *(none)*                        | Seed for shuffling the split.                            |
 | `--base-url`     | `http://localhost:8000`         | Server URL for `--mode http`.                            |
+| `--concurrency`  | `1`                             | Process this many instances concurrently (mock/service/http). |
 | `--report`       | `eval/eval_report.json`         | Where to write the JSON report.                          |
 | `--quiet`        | `False`                         | Suppress INFO logging.                                   |
 
