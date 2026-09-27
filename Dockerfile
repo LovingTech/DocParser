@@ -1,6 +1,6 @@
 FROM python:3.12-slim AS base
 
-WORKDIR /backend
+WORKDIR /app
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_DIR=/root/.local \
@@ -22,4 +22,4 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-config", "/app/backend/log_config.json"]

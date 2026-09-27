@@ -11,7 +11,6 @@ class Settings:
         # proxies (OpenRouter, vLLM, DeepSeek, etc.).
         self.openai_base_url: str = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
         self.model: str = os.getenv("OPENAI_MODEL", "gpt-4o")
-        self.temperature: float = float(os.getenv("OPENAI_MODEL_TEMPERATURE", 0.7))
         self.pdf_dpi: int = int(os.getenv("PDF_DPI", "200"))
         self.max_pages: int = int(os.getenv("MAX_PAGES", "10"))
         self.image_max_side: int = int(os.getenv("IMAGE_MAX_SIDE", "2000"))
@@ -22,6 +21,13 @@ class Settings:
         # Seconds to wait between retries. Kept non-blocking via asyncio.sleep;
         # 0 means retry immediately (default).
         self.llm_retry_backoff: float = float(os.getenv("LLM_RETRY_BACKOFF", "0"))
+        
+
+        temperature = os.getenv("OPENAI_MODEL_TEMPERATURE", None)
+        if temperature:
+            self.temperature: float = float(temperature)
+        else:
+            self.temperature = None
 
     @property
     def api_key_required(self) -> bool:

@@ -16,6 +16,10 @@ services:
     build: .
     image: doc-parser:latest
     container_name: doc-parser
+    #models:
+    #  parser:
+    #    endpoint_var: OPENAI_BASE_URL
+    #    model_var: OPENAI_MODEL
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
@@ -25,3 +29,7 @@ services:
       - IMAGE_MAX_SIDE=${IMAGE_MAX_SIDE:-2000}
       - IMAGE_QUALITY=${IMAGE_QUALITY:-75}
     restart: unless-stopped
+
+#models:
+  #parser:
+    #model: ai/glm-ocr

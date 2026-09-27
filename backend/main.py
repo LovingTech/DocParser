@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import logging.config
+import os
 import time
 import warnings
 
@@ -24,10 +27,19 @@ __all__ = [
 # benign shadow warning for it specifically so logs stay clean.
 warnings.filterwarnings("ignore", message='.*shadows an attribute in parent "BaseModel".*')
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+LOG_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "log_config.json")
+
+
+def configure_logging() -> None:
+    """Apply the shared ``log_config.json`` ``dictConfig`` so the root logger --
+    and every logger that propagates to it, including loggers created later or in
+    third-party libraries -- logs with one consistent format."""
+    with open(LOG_CONFIG_PATH) as f:
+        logging.config.dictConfig(json.load(f))
+
+
+configure_logging()
+
 logger = logging.getLogger("app")
 
 app = FastAPI(

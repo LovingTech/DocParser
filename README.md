@@ -94,8 +94,11 @@ dataset layout.
 
 ```bash
 uv sync
-uv run uvicorn backend.main:app --reload
+uv run uvicorn backend.main:app --reload --log-config backend/log_config.json
 ```
+
+The `--log-config` applies a single `dictConfig` so uvicorn's server logs and the
+app's loggers share one format.
 
 ## Run with Docker
 
